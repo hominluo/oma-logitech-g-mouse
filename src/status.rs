@@ -10,8 +10,8 @@ use std::{
 use crate::{
     device::Device,
     hidpp::{
-        DPI_PRESETS, Features, battery, button, device_name, dpi, dpi_presets, max_dpi,
-        onboard_mode, report_rate,
+        DPI_PRESETS, Features, REPORT_RATES, battery, button, device_name, dpi, dpi_presets,
+        max_dpi, min_dpi, onboard_mode, report_rate, report_rates,
     },
 };
 
@@ -66,8 +66,8 @@ fn timestamp() -> u128 {
 
 pub(crate) fn status(device: &mut Device, features: Features) -> String {
     let mut errors = Vec::new();
-    let name = if features.name > 0 {
-        match device_name(device, features.name) {
+    let name = if let Some(feature) = features.name {
+        match device_name(device, feature) {
             Ok(value) if !value.is_empty() => value,
             Ok(_) => "Logitech G Mouse".into(),
             Err(error) => {
@@ -78,8 +78,8 @@ pub(crate) fn status(device: &mut Device, features: Features) -> String {
     } else {
         "Logitech G Mouse".into()
     };
-    let battery = if features.battery > 0 {
-        match battery(device, features.battery) {
+    let battery = if let Some(capability) = features.battery {
+        match battery(device, capability) {
             Ok((percentage, level, state)) => format!(
                 "{{\"percentage\":{percentage},\"level\":\"{level}\",\"status\":\"{state}\"}}"
             ),
@@ -91,8 +91,8 @@ pub(crate) fn status(device: &mut Device, features: Features) -> String {
     } else {
         "null".into()
     };
-    let dpi_value = if features.dpi > 0 {
-        match dpi(device, features.dpi) {
+    let dpi_value = if let Some(capability) = features.dpi {
+        match dpi(device, capability) {
             Ok((x, default_x, y, default_y, lod)) => format!(
                 "{{\"dpiX\":{x},\"defaultDpiX\":{default_x},\"dpiY\":{y},\"defaultDpiY\":{default_y},\"lod\":\"{lod}\"}}"
             ),
@@ -104,23 +104,33 @@ pub(crate) fn status(device: &mut Device, features: Features) -> String {
     } else {
         "null".into()
     };
-    let presets = if features.dpi > 0 {
-        dpi_presets(device, features.dpi)
+    let presets = if let Some(capability) = features.dpi {
+        dpi_presets(device, capability)
     } else {
         DPI_PRESETS.map(|value| value as u16).to_vec()
     };
-    let max = if features.dpi > 0 {
-        max_dpi(device, features.dpi)
+    let max = if let Some(capability) = features.dpi {
+        max_dpi(device, capability)
     } else {
         32000
     };
-    let rate = if features.report_rate > 0 {
-        report_rate(device, features.report_rate)
+    let min = if let Some(capability) = features.dpi {
+        min_dpi(device, capability)
+    } else {
+        100
+    };
+    let rate = if let Some(capability) = features.report_rate {
+        report_rate(device, capability)
     } else {
         1000
     };
-    let onboard_profile_mode = if features.profiles > 0 {
-        match onboard_mode(device, features.profiles) {
+    let rates = if let Some(capability) = features.report_rate {
+        report_rates(device, capability)
+    } else {
+        REPORT_RATES.to_vec()
+    };
+    let onboard_profile_mode = if let Some(feature) = features.profiles {
+        match onboard_mode(device, feature) {
             Ok((code, mode)) => format!("{{\"code\":{code},\"mode\":\"{mode}\"}}"),
             Err(error) => {
                 errors.push(format!("onboard profiles: {error}"));
@@ -150,11 +160,16 @@ pub(crate) fn status(device: &mut Device, features: Features) -> String {
         quote(bounded(&errors.join("; "), MAX_ERROR_BYTES))
     };
     format!(
-        "{{\"connected\":true,\"deviceName\":{},\"battery\":{battery},\"dpi\":{dpi_value},\"dpiMin\":100,\"dpiMax\":{max},\"dpiPresets\":[{}],\"reportRate\":{rate},\"onboardProfileMode\":{onboard_profile_mode},\"hasHits\":{},\"hits\":{hits},\"error\":{error},\"updatedAt\":{}}}",
+        "{{\"connected\":true,\"deviceName\":{},\"battery\":{battery},\"dpi\":{dpi_value},\"dpiMin\":{min},\"dpiMax\":{max},\"dpiPresets\":[{}],\"reportRate\":{rate},\"reportRates\":[{}],\"onboardProfileMode\":{onboard_profile_mode},\"hasHits\":{},\"hits\":{hits},\"error\":{error},\"updatedAt\":{}}}",
         quote(&name),
         presets
             .iter()
             .map(u16::to_string)
+            .collect::<Vec<_>>()
+            .join(","),
+        rates
+            .iter()
+            .map(u32::to_string)
             .collect::<Vec<_>>()
             .join(","),
         features.hits.is_some(),
@@ -164,7 +179,7 @@ pub(crate) fn status(device: &mut Device, features: Features) -> String {
 
 pub(crate) fn offline(error: &str) -> String {
     format!(
-        "{{\"connected\":false,\"deviceName\":\"Logitech G Mouse\",\"battery\":null,\"dpi\":null,\"dpiMin\":100,\"dpiMax\":32000,\"dpiPresets\":[800,1200,1600,2400,3200],\"reportRate\":1000,\"onboardProfileMode\":null,\"hasHits\":false,\"hits\":null,\"error\":{},\"updatedAt\":{}}}",
+        "{{\"connected\":false,\"deviceName\":\"Logitech G Mouse\",\"battery\":null,\"dpi\":null,\"dpiMin\":100,\"dpiMax\":32000,\"dpiPresets\":[800,1200,1600,2400,3200],\"reportRate\":1000,\"reportRates\":[125,250,500,1000,2000,4000,8000],\"onboardProfileMode\":null,\"hasHits\":false,\"hits\":null,\"error\":{},\"updatedAt\":{}}}",
         quote(bounded(error, MAX_ERROR_BYTES)),
         timestamp()
     )

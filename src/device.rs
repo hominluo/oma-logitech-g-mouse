@@ -9,12 +9,18 @@ use std::{
 const VID: u32 = 0x046d;
 const REPORT_LONG: u8 = 0x11;
 const LONG_LEN: usize = 20;
-const SWID: u8 = 0x07;
+// HID++ software id, echoed in the low nibble of the response's function
+// byte. Cycled per request so a late reply to an earlier call cannot be
+// mistaken for the answer to this one — every getFeature call otherwise
+// shares an identical header and only the params differ.
+const SWID_MIN: u8 = 1;
+const SWID_MAX: u8 = 15;
 
 pub(crate) struct Device {
     file: File,
     path: String,
     index: u8,
+    swid: u8,
 }
 
 impl Device {
@@ -29,6 +35,7 @@ impl Device {
             file,
             path,
             index: 1,
+            swid: SWID_MIN,
         })
     }
 
@@ -50,11 +57,17 @@ impl Device {
         tries: u8,
         timeout: Duration,
     ) -> Result<Vec<u8>, String> {
+        self.swid = if self.swid >= SWID_MAX {
+            SWID_MIN
+        } else {
+            self.swid + 1
+        };
+        let swid = self.swid;
         let mut packet = [0u8; LONG_LEN];
         packet[0] = REPORT_LONG;
         packet[1] = self.index;
         packet[2] = feature;
-        packet[3] = (function << 4) | SWID;
+        packet[3] = (function << 4) | swid;
         for (i, value) in params.iter().take(LONG_LEN - 4).enumerate() {
             packet[4 + i] = *value;
         }
@@ -69,13 +82,22 @@ impl Device {
             while Instant::now() < deadline {
                 match self.file.read(&mut response) {
                     Ok(n) if n >= 4 => {
+                        // Error report: [_, index, 0xff|0x8f, feature, fn|swid, code].
                         if response[2] == 0x8f || response[2] == 0xff {
-                            last_error = response.get(5).copied();
-                            break;
+                            if n >= 6
+                                && response[3] == feature
+                                && response[4] >> 4 == function
+                                && response[4] & 0x0f == swid
+                            {
+                                last_error = response.get(5).copied();
+                                break;
+                            }
+                            continue;
                         }
                         if response[1] == self.index
                             && response[2] == feature
                             && response[3] >> 4 == function
+                            && response[3] & 0x0f == swid
                         {
                             return Ok(response[4..n].to_vec());
                         }
@@ -117,10 +139,6 @@ impl Device {
         .and_then(|body| body.first().copied())
         .filter(|index| *index > 0)
     }
-
-    pub(crate) fn feature(&mut self, id: u16, fallback: u8) -> u8 {
-        self.feature_optional(id).unwrap_or(fallback)
-    }
 }
 
 fn is_logitech_hidraw(name: &str) -> bool {
@@ -149,10 +167,18 @@ fn find_device() -> Result<Device, String> {
         .collect();
     names.sort();
     names.sort_by_key(|name| !has_hidpp_usage(name));
+    let mut denied = Vec::new();
+    let mut seen = false;
     for name in names {
+        seen = true;
         let mut device = match Device::open(format!("/dev/{name}")) {
             Ok(device) => device,
-            Err(_) => continue,
+            Err(error) => {
+                if error.contains("Permission denied") {
+                    denied.push(name);
+                }
+                continue;
+            }
         };
         if [1, 2, 3, 4, 5, 6, 0xff]
             .into_iter()
@@ -160,6 +186,16 @@ fn find_device() -> Result<Device, String> {
         {
             return Ok(device);
         }
+    }
+    if !denied.is_empty() {
+        return Err(format!(
+            "Permission denied opening {}. Your session has no access to the \
+             Logitech HID nodes; see the udev setup in the README.",
+            denied.join(", ")
+        ));
+    }
+    if !seen {
+        return Err("No Logitech HID device present.".into());
     }
     Err("No Logitech HID++ device found.".into())
 }

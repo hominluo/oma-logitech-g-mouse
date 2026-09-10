@@ -25,10 +25,11 @@ fn main() {
         }
     };
     let features = features(&mut device);
-    if args.profile_mode.is_none() && features.profiles > 0 {
-        if let Err(error) = prefer_host_profile_mode(&mut device, features.profiles) {
-            eprintln!("default profile source failed: {error}");
-        }
+    if args.profile_mode.is_none()
+        && let Some(feature) = features.profiles
+        && let Err(error) = prefer_host_profile_mode(&mut device, feature)
+    {
+        eprintln!("default profile source failed: {error}");
     }
 
     let settings_requested = args.actuation.is_some()
@@ -50,7 +51,10 @@ fn main() {
             profile.apply(&mut device, features)?;
         }
         if let Some(mode) = args.profile_mode {
-            set_onboard_mode(&mut device, features.profiles, mode)?;
+            let feature = features
+                .profiles
+                .ok_or("this mouse does not expose onboard profiles")?;
+            set_onboard_mode(&mut device, feature, mode)?;
         }
         Ok(())
     })();
