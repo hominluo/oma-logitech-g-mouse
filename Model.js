@@ -22,6 +22,7 @@ function defaultStatus() {
     dpiMax: 32000,
     dpiPresets: [800, 1200, 1600, 2400, 3200],
     reportRate: 1000,
+    reportRates: [125, 250, 500, 1000, 2000, 4000, 8000],
     onboardProfileMode: "unknown",
     lod: "unknown",
     hasHits: false,
@@ -70,6 +71,9 @@ function parseStatus(raw) {
 
   if (data.reportRate) {
     s.reportRate = Number(data.reportRate) || 1000
+  }
+  if (Array.isArray(data.reportRates) && data.reportRates.length > 0) {
+    s.reportRates = data.reportRates
   }
 
   if (data.onboardProfileMode) {

@@ -21,6 +21,7 @@ Item {
     property int dpiMax: 32000
     property var dpiPresets: [800, 1200, 1600, 2400, 3200]
     property int reportRate: 1000
+    property var reportRates: [125, 250, 500, 1000, 2000, 4000, 8000]
     property string onboardProfileMode: "unknown"
     property string lod: "unknown"
     property bool hasHits: false
@@ -56,6 +57,7 @@ Item {
         dpiMax = Number(status.dpiMax || 32000)
         dpiPresets = status.dpiPresets || [800, 1200, 1600, 2400, 3200]
         reportRate = Number(status.reportRate || 1000)
+        reportRates = status.reportRates || [125, 250, 500, 1000, 2000, 4000, 8000]
         onboardProfileMode = String(status.onboardProfileMode || "unknown")
         lod = String(status.lod || "unknown")
         hasHits = !!status.hasHits

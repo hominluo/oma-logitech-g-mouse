@@ -32,6 +32,7 @@ Panel {
     readonly property int dpiMax: mouse ? mouse.dpiMax : 32000
     readonly property var dpiPresets: mouse ? mouse.dpiPresets : [800, 1200, 1600, 2400, 3200]
     readonly property int reportRate: mouse ? mouse.reportRate : 1000
+    readonly property var reportRates: mouse ? mouse.reportRates : [125, 250, 500, 1000, 2000, 4000, 8000]
     readonly property string onboardProfileMode: mouse ? mouse.onboardProfileMode : "unknown"
     readonly property string lod: mouse ? mouse.lod : "unknown"
     readonly property bool hasHits: mouse ? mouse.hasHits : false
@@ -130,10 +131,11 @@ Panel {
                     Rectangle {
                         width: parent.width
                         height: Style.space(50)
-                        radius: 8
-                        color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, root.mouseConnected ? 0.08 : 0.04)
-                        border.width: 1
-                        border.color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.12)
+                        radius: Style.cornerRadius
+                        color: Style.normalFillFor(root.foreground, Color.accent)
+                        opacity: root.mouseConnected ? 1.0 : 0.5
+                        border.width: Style.normalBorderWidth
+                        border.color: Style.normalBorderFor(root.foreground, Color.accent)
 
                         Row {
                             anchors.centerIn: parent
@@ -188,28 +190,17 @@ Panel {
                                     label: "Buttons (Analog HITS)"
                                 }
                             ]
-                            delegate: Rectangle {
+                            delegate: Button {
+                                required property var modelData
                                 width: Math.floor((content.width - Style.space(6)) / 2)
-                                height: Style.space(30)
-                                radius: 4
-                                color: root.currentTab === modelData.id ? Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.22) : Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.06)
-                                border.width: root.currentTab === modelData.id ? 1 : 0
-                                border.color: root.foreground
-
-                                Text {
-                                    anchors.centerIn: parent
-                                    text: modelData.label
-                                    color: root.foreground
-                                    font.family: root.fontFamily
-                                    font.pixelSize: Style.font.bodySmall
-                                    font.bold: root.currentTab === modelData.id
-                                }
-
-                                MouseArea {
-                                    anchors.fill: parent
-                                    cursorShape: Qt.PointingHandCursor
-                                    onClicked: root.currentTab = modelData.id
-                                }
+                                height: Style.spacing.controlHeight
+                                text: modelData.label
+                                bordered: true
+                                selected: root.currentTab === modelData.id
+                                foreground: root.foreground
+                                fontFamily: root.fontFamily
+                                fontSize: Style.font.bodySmall
+                                onClicked: root.currentTab = modelData.id
                             }
                         }
                     }
@@ -227,13 +218,10 @@ Panel {
                             width: parent.width
                             spacing: Style.space(8)
 
-                            Text {
+                            PanelSectionHeader {
                                 text: "SENSITIVITY (DPI)"
-                                color: root.foreground
-                                font.family: root.fontFamily
-                                font.pixelSize: Style.font.bodySmall
-                                font.bold: true
-                                opacity: 0.6
+                                foreground: root.foreground
+                                fontFamily: root.fontFamily
                             }
 
                             // Dynamic Presets Buttons (filling 100% width)
@@ -242,31 +230,20 @@ Panel {
                                 spacing: Style.space(6)
                                 Repeater {
                                     model: root.dpiPresets
-                                    delegate: Rectangle {
+                                    delegate: Button {
+                                        required property var modelData
                                         width: Math.floor((parent.width - Style.space(6) * (root.dpiPresets.length - 1)) / root.dpiPresets.length)
-                                        height: Style.space(28)
-                                        radius: 4
-                                        color: root.dpiX === modelData ? Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.22) : Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.06)
-                                        border.width: root.dpiX === modelData ? 1 : 0
-                                        border.color: root.foreground
-
-                                        Text {
-                                            anchors.centerIn: parent
-                                            text: String(modelData)
-                                            color: root.foreground
-                                            font.family: root.fontFamily
-                                            font.pixelSize: Style.font.bodySmall
-                                            font.bold: root.dpiX === modelData
-                                        }
-
-                                        MouseArea {
-                                            anchors.fill: parent
-                                            cursorShape: Qt.PointingHandCursor
-                                            onClicked: {
-                                                dpiSlider.value = modelData;
-                                                if (root.mouse)
+                                        height: Style.spacing.controlHeight
+                                        text: String(modelData)
+                                        bordered: true
+                                        selected: root.dpiX === modelData
+                                        foreground: root.foreground
+                                        fontFamily: root.fontFamily
+                                        fontSize: Style.font.bodySmall
+                                        onClicked: {
+                                            dpiSlider.value = modelData;
+                                            if (root.mouse)
                                                 root.mouse.setDpi(modelData);
-                                            }
                                         }
                                     }
                                 }
@@ -375,15 +352,12 @@ Panel {
                                 width: parent.width
                                 height: Style.space(20)
 
-                                Text {
+                                PanelSectionHeader {
                                     anchors.left: parent.left
                                     anchors.verticalCenter: parent.verticalCenter
                                     text: "REPORT RATE (POLLING)"
-                                    color: root.foreground
-                                    font.family: root.fontFamily
-                                    font.pixelSize: Style.font.bodySmall
-                                    font.bold: true
-                                    opacity: 0.6
+                                    foreground: root.foreground
+                                    fontFamily: root.fontFamily
                                 }
 
                                 Text {
@@ -402,30 +376,20 @@ Panel {
                                 width: parent.width
                                 spacing: Style.space(6)
                                 Repeater {
-                                    model: [125, 250, 500, 1000, 2000, 4000, 8000]
-                                    delegate: Rectangle {
-                                        width: Math.floor((parent.width - Style.space(6) * 6) / 7)
-                                        height: Style.space(26)
-                                        radius: 4
-                                        color: (root.mouse && root.mouse.reportRate === modelData) ? Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.22) : Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.06)
-                                        border.width: (root.mouse && root.mouse.reportRate === modelData) ? 1 : 0
-                                        border.color: root.foreground
-
-                                        Text {
-                                            anchors.centerIn: parent
-                                            text: modelData >= 1000 ? (modelData / 1000) + "K" : String(modelData)
-                                            color: root.foreground
-                                            font.family: root.fontFamily
-                                            font.pixelSize: Style.font.caption
-                                            font.bold: root.mouse && root.mouse.reportRate === modelData
-                                        }
-
-                                        MouseArea {
-                                            anchors.fill: parent
-                                            cursorShape: Qt.PointingHandCursor
-                                            onClicked: if (root.mouse)
+                                    model: root.reportRates
+                                    delegate: Button {
+                                        required property var modelData
+                                        width: Math.floor((parent.width - Style.space(6) * (root.reportRates.length - 1)) / root.reportRates.length)
+                                        height: Style.spacing.controlHeight
+                                        text: modelData >= 1000 ? (modelData / 1000) + "K" : String(modelData)
+                                        bordered: true
+                                        selected: root.mouse && root.mouse.reportRate === modelData
+                                        foreground: root.foreground
+                                        fontFamily: root.fontFamily
+                                        fontSize: Style.font.caption
+                                        horizontalPadding: Style.spacing.xs
+                                        onClicked: if (root.mouse)
                                             root.mouse.setReportRate(modelData)
-                                        }
                                     }
                                 }
                             }
@@ -442,13 +406,10 @@ Panel {
                             width: parent.width
                             spacing: Style.space(8)
 
-                            Text {
+                            PanelSectionHeader {
                                 text: "SETTINGS SOURCE"
-                                color: root.foreground
-                                font.family: root.fontFamily
-                                font.pixelSize: Style.font.bodySmall
-                                font.bold: true
-                                opacity: 0.6
+                                foreground: root.foreground
+                                fontFamily: root.fontFamily
                             }
 
                             Text {
@@ -473,31 +434,19 @@ Panel {
                                         { mode: "onboard", label: "Onboard" }
                                     ]
 
-                                    delegate: Rectangle {
+                                    delegate: Button {
+                                        required property var modelData
                                         width: Math.floor((parent.width - Style.space(6)) / 2)
-                                        height: Style.space(28)
-                                        radius: 4
-                                        color: root.onboardProfileMode === modelData.mode
-                                            ? Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.22)
-                                            : Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.06)
-                                        border.width: root.onboardProfileMode === modelData.mode ? 1 : 0
-                                        border.color: root.foreground
-
-                                        Text {
-                                            anchors.centerIn: parent
-                                            text: modelData.label
-                                            color: root.foreground
-                                            font.family: root.fontFamily
-                                            font.pixelSize: Style.font.caption
-                                            font.bold: root.onboardProfileMode === modelData.mode
-                                        }
-
-                                        MouseArea {
-                                            anchors.fill: parent
-                                            cursorShape: Qt.PointingHandCursor
-                                            enabled: root.mouse && root.onboardProfileMode !== "unknown"
-                                            onClicked: root.mouse.setOnboardProfileMode(modelData.mode)
-                                        }
+                                        height: Style.spacing.controlHeight
+                                        text: modelData.label
+                                        bordered: true
+                                        selected: root.onboardProfileMode === modelData.mode
+                                        foreground: root.foreground
+                                        fontFamily: root.fontFamily
+                                        fontSize: Style.font.caption
+                                        enabled: root.mouse && root.onboardProfileMode !== "unknown"
+                                        opacity: enabled ? 1.0 : 0.5
+                                        onClicked: root.mouse.setOnboardProfileMode(modelData.mode)
                                     }
                                 }
                             }
@@ -522,12 +471,12 @@ Panel {
                             Rectangle {
                                 width: parent.width
                                 height: Style.space(24)
-                                radius: 4
-                                color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.06)
+                                radius: Style.cornerRadius
+                                color: Style.normalFillFor(root.foreground, Color.accent)
 
                                 Text {
                                     anchors.left: parent.left
-                                    anchors.leftMargin: Style.space(8)
+                                    anchors.leftMargin: Style.spacing.lg
                                     anchors.verticalCenter: parent.verticalCenter
                                     text: "LEFT BUTTON"
                                     color: root.foreground
@@ -773,12 +722,12 @@ Panel {
                             Rectangle {
                                 width: parent.width
                                 height: Style.space(24)
-                                radius: 4
-                                color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.06)
+                                radius: Style.cornerRadius
+                                color: Style.normalFillFor(root.foreground, Color.accent)
 
                                 Text {
                                     anchors.left: parent.left
-                                    anchors.leftMargin: Style.space(8)
+                                    anchors.leftMargin: Style.spacing.lg
                                     anchors.verticalCenter: parent.verticalCenter
                                     text: "RIGHT BUTTON"
                                     color: root.foreground
