@@ -25,10 +25,11 @@ fn main() {
         }
     };
     let features = features(&mut device);
-    if args.profile_mode.is_none() && features.profiles > 0 {
-        if let Err(error) = prefer_host_profile_mode(&mut device, features.profiles) {
-            eprintln!("default profile source failed: {error}");
-        }
+    if args.profile_mode.is_none()
+        && let Some(feature) = features.profiles
+        && let Err(error) = prefer_host_profile_mode(&mut device, feature)
+    {
+        eprintln!("default profile source failed: {error}");
     }
 
     let settings_requested = args.actuation.is_some()
@@ -38,6 +39,17 @@ fn main() {
         || args.rate.is_some();
     let write_requested = settings_requested || args.profile_mode.is_some();
     let result = (|| -> Result<(), String> {
+        if args.dpi.is_some() && features.dpi.is_none() {
+            return Err("mouse does not support DPI control".into());
+        }
+        if args.rate.is_some() && features.report_rate.is_none() {
+            return Err("mouse does not support report-rate control".into());
+        }
+        if (args.actuation.is_some() || args.rapid_trigger.is_some() || args.haptics.is_some())
+            && features.hits.is_none()
+        {
+            return Err("mouse does not support analog switch control".into());
+        }
         let mut profile = load_profile()?;
         if settings_requested {
             profile.update(&args);
@@ -50,7 +62,10 @@ fn main() {
             profile.apply(&mut device, features)?;
         }
         if let Some(mode) = args.profile_mode {
-            set_onboard_mode(&mut device, features.profiles, mode)?;
+            let feature = features
+                .profiles
+                .ok_or_else(|| "mouse does not support onboard profiles".to_owned())?;
+            set_onboard_mode(&mut device, feature, mode)?;
         }
         Ok(())
     })();

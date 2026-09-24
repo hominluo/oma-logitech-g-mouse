@@ -7,7 +7,7 @@ An [Omarchy Quattro](https://omarchy.org/) bar widget and control panel for Logi
 ## Requirements
 
 - Omarchy Quattro on x86_64 Linux.
-- A Logitech G mouse reachable through `/dev/hidraw`.
+- A Logitech G mouse reachable through `/dev/hidraw`; G304/G305 is supported through its LIGHTSPEED USB receiver.
 
 The plugin includes its native controller. Bun, Node.js, Python, and Rust are not required to use it.
 

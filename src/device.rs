@@ -110,16 +110,12 @@ impl Device {
             0,
             0,
             &[(id >> 8) as u8, id as u8],
-            2,
-            Duration::from_millis(150),
+            3,
+            Duration::from_millis(400),
         )
         .ok()
         .and_then(|body| body.first().copied())
         .filter(|index| *index > 0)
-    }
-
-    pub(crate) fn feature(&mut self, id: u16, fallback: u8) -> u8 {
-        self.feature_optional(id).unwrap_or(fallback)
     }
 }
 

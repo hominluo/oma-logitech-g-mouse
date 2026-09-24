@@ -47,10 +47,16 @@ impl Profile {
     }
 
     pub(crate) fn capture(device: &mut Device, features: Features) -> Result<Self, String> {
-        let (dpi, _, _, _, _) = dpi(device, features.dpi)?;
+        let dpi = match features.dpi {
+            Some(feature) => Some(u32::from(dpi(device, feature)?.0)),
+            None => None,
+        };
+        let rate = features
+            .report_rate
+            .map(|feature| report_rate(device, feature));
         let mut profile = Self {
-            dpi: Some(u32::from(dpi)),
-            rate: Some(report_rate(device, features.report_rate)),
+            dpi,
+            rate,
             ..Self::default()
         };
         if let Some(feature) = features.hits {
@@ -71,11 +77,11 @@ impl Profile {
     }
 
     pub(crate) fn apply(&self, device: &mut Device, features: Features) -> Result<(), String> {
-        if let Some(dpi) = self.dpi {
-            set_dpi(device, features.dpi, dpi)?;
+        if let (Some(dpi), Some(feature)) = (self.dpi, features.dpi) {
+            set_dpi(device, feature, dpi)?;
         }
-        if let Some(rate) = self.rate {
-            set_report_rate(device, features.report_rate, rate);
+        if let (Some(rate), Some(feature)) = (self.rate, features.report_rate) {
+            set_report_rate(device, feature, rate);
         }
         if let Some(feature) = features.hits {
             apply_button(device, feature, 0, self.left)?;

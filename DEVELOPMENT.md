@@ -48,16 +48,16 @@ Each invocation prints one JSON status object. It also atomically publishes the 
 
 ### HID++ features
 
-| Capability           | Feature ID | Fallback index |
-| -------------------- | ---------- | -------------- |
-| Device name          | `0x0005`   | `0x03`         |
-| Unified battery      | `0x1004`   | `0x06`         |
-| Extended DPI         | `0x2202`   | `0x09`         |
-| HITS analog switches | `0x1B0C`   | `0x0C`         |
-| Onboard profiles     | `0x8100`   | `0x0E`         |
-| Extended report rate | `0x8061`   | `0x0D`         |
+| Capability           | Preferred feature | Compatible feature |
+| -------------------- | ----------------- | ------------------ |
+| Device name          | `0x0005`          | —                  |
+| Battery status       | `0x1004`          | `0x1000`           |
+| DPI                   | `0x2202`          | `0x2201`           |
+| HITS analog switches | `0x1B0C`          | —                  |
+| Onboard profiles     | `0x8100`          | —                  |
+| Report rate           | `0x8061`          | `0x8060`           |
 
-Fallback indices support hardware that temporarily rejects feature discovery; discovered indices remain authoritative.
+Feature indices are always resolved from the connected device. The compatible HID++ features cover devices such as the G304/G305 LIGHTSPEED receiver, while newer extended features remain preferred when both are available.
 
 ## Local development
 

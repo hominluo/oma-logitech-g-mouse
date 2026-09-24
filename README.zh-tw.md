@@ -7,7 +7,7 @@
 ## 需求
 
 - x86_64 Linux 上的 Omarchy Quattro。
-- 可透過 `/dev/hidraw` 存取的 Logitech G 滑鼠。
+- 可透過 `/dev/hidraw` 存取的 Logitech G 滑鼠；G304/G305 可透過其 LIGHTSPEED USB 接收器使用。
 
 外掛隨附原生控制程式；使用時不需要 Bun、Node.js、Python 或 Rust。
 
