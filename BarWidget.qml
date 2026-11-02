@@ -75,17 +75,25 @@ BarWidget {
         bar: root.bar
         active: false
         useActiveColor: false
-        slotSize: Style.bar.iconSlot * (root.showPercentage ? 2.2 : 1.0)
+        slotSize: Style.bar.iconSlot * (root.showPercentage && !root.vertical ? 2.0 : 1.0)
         tooltipText: Model.barTooltip(mouse)
+        // `text` is rendered as a single icon glyph and scaled down to the icon
+        // canvas, so the percentage must go through `labelText` or it shrinks
+        // to an unreadable size next to the mouse icon.
         text: {
             if (!mouse.connected) {
-                return root.showPercentage ? "Off 󰍽" : "󰍽";
+                return "󰍽";
             }
-            var icon = Model.batteryIcon(mouse.batteryPercentage, mouse.batteryStatus);
-            if (!root.showPercentage) {
-                return icon;
+            return Model.batteryIcon(mouse.batteryPercentage, mouse.batteryStatus);
+        }
+        labelText: {
+            if (!root.showPercentage || root.vertical) {
+                return "";
             }
-            return Model.batteryText(mouse.batteryPercentage) + " " + icon;
+            if (!mouse.connected) {
+                return "Off";
+            }
+            return Model.batteryText(mouse.batteryPercentage);
         }
         onPressed: function (buttonCode) {
             if (buttonCode === Qt.LeftButton) {
